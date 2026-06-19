@@ -1,0 +1,13 @@
+Estrutura código
+
+camera celular
+      ↓
+detector movimento
+      ↓
+detector facial YOLO-Face
+      ↓
+rastreamento
+      ↓
+crop do rosto
+      ↓
+saida para reconhecimento futuro
