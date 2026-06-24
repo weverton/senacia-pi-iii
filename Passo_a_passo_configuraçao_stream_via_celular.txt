@@ -1,0 +1,215 @@
+# Streaming de Câmera do Celular para Python (Detecção de Faces)
+
+Este guia explica como transformar o celular em uma câmera de rede usando os apps **Larix Broadcaster** ou **IP Camera**, passando o vídeo por um servidor **MediaMTX** rodando no PC, para ser lido depois por um script Python (OpenCV).
+
+```
+[Celular: Larix ou IP Camera] --RTMP/RTSP--> [PC: MediaMTX] <--RTSP-- [Script Python]
+```
+
+---
+
+## Pré-requisitos
+
+- PC com Windows, Mac ou Linux
+- Celular com o app **Larix Broadcaster** ou **IP Camera** instalado
+- Celular e PC na **mesma rede Wi-Fi** (sem isolamento de cliente/AP isolation)
+- Python 3 com `opencv-python` instalado:
+  ```bash
+  pip install opencv-python
+  ```
+
+---
+
+## Parte 1 — Instalar e rodar o MediaMTX (servidor)
+
+1. Baixe o MediaMTX para seu sistema em:
+   ```
+   https://github.com/bluenviron/mediamtx/releases
+   ```
+   - Windows → `mediamtx_vX.X.X_windows_amd64.zip`
+   - Mac → `mediamtx_vX.X.X_darwin_amd64.zip` (Intel) ou `darwin_arm64.zip` (Apple Silicon)
+   - Linux → `mediamtx_vX.X.X_linux_amd64.tar.gz`
+
+2. Extraia o arquivo em uma pasta.
+
+3. **Windows:** dê duplo-clique em `mediamtx.exe`
+   Se o Windows bloquear, clique em **Mais informações → Executar assim mesmo**.
+
+   **Mac/Linux:** no Terminal, dentro da pasta extraída:
+   ```bash
+   chmod +x mediamtx
+   ./mediamtx
+   ```
+   Se o macOS bloquear, rode antes:
+   ```bash
+   xattr -d com.apple.quarantine mediamtx
+   ```
+
+4. Se tudo der certo, vai aparecer algo como:
+   ```
+   INF [RTSP] listener opened on :8554
+   INF [RTMP] listener opened on :1935
+   ```
+   **Deixe essa janela aberta** — é o seu servidor rodando.
+
+5. Permita o acesso pelo Firewall do Windows/Mac quando for solicitado (ou o celular não vai conseguir conectar).
+
+---
+
+## Parte 2 — Descobrir o IP do PC
+
+### Windows
+No Prompt de Comando (`Win + R` → `cmd`):
+```cmd
+ipconfig
+```
+Procure o adaptador correto (Wi-Fi ou Ethernet real, com **Gateway Padrão** válido).
+Evite IPs de adaptadores virtuais: `vEthernet`, `WSL`, `Loopback`, `Docker`.
+
+### Mac
+No Terminal:
+```bash
+ipconfig getifaddr en0
+```
+(troque `en0` por `en1` se estiver usando cabo de rede em vez de Wi-Fi)
+
+### Linux
+```bash
+hostname -I
+```
+
+> Anote esse IP — vamos chamá-lo de `IP_DO_PC` nos exemplos abaixo.
+
+---
+
+## Parte 3 — Configurar o app Larix Broadcaster
+
+> ⚠️ Em algumas versões do Larix, **RTSP push** é recurso pago. Se aparecer erro de protocolo não suportado, use **RTMP** (gratuito).
+
+### Opção A — RTMP (recomendada se RTSP não estiver disponível)
+
+1. Abra o Larix → **Connections** → toque no **+**
+2. Preencha os campos:
+   - **Name:** qualquer nome (ex: `MeuServidor`)
+   - **Mode:** `RTMP`
+   - **URL:**
+     ```
+     rtmp://IP_DO_PC:1935/live/cam
+     ```
+     > Use o formato `/live/cam` (app + stream name). Um único segmento como `/cam` pode gerar erro "can't find rtmp app and stream" em algumas versões.
+   - **Target Type:** deixe o padrão (Generic RTMP)
+3. Salve e toque em **Start streaming** (ícone de transmissão)
+
+### Opção B — RTSP (se disponível no seu Larix)
+
+1. **Connections** → **+**
+2. **Mode:** `RTSP`
+3. **URL:**
+   ```
+   rtsp://IP_DO_PC:8554/cam
+   ```
+4. Salve e conecte
+
+---
+
+## Parte 4 — Configurar o app IP Camera
+
+O app **IP Camera** (Android) também pode publicar (push) para um servidor, ou funcionar como servidor próprio. As opções variam pela versão instalada — use o caminho que aparecer no seu app:
+
+### Opção A — IP Camera publicando via RTSP/RTMP push
+
+1. Abra o app **IP Camera**
+2. Vá em **Configurações** (ícone de engrenagem)
+3. Procure a seção **Servidor RTSP** ou **Push / Publicar para servidor**
+4. Informe a URL de destino:
+   ```
+   rtsp://IP_DO_PC:8554/cam
+   ```
+   ou, se só tiver opção RTMP:
+   ```
+   rtmp://IP_DO_PC:1935/live/cam
+   ```
+5. Inicie o streaming no app (geralmente um botão **Start Server** ou **Start Streaming**)
+
+### Opção B — IP Camera como servidor (modo mais comum no app)
+
+Muitas versões do IP Camera funcionam **ao contrário**: o próprio app abre um servidor no celular, e é o Python que conecta nele (sem precisar do MediaMTX nesse caso).
+
+1. Abra o app → toque em **Start Server**
+2. O app vai mostrar um endereço na tela, parecido com:
+   ```
+   rtsp://IP_DO_CELULAR:5554/h264_ulaw.sdp
+   ```
+   ou
+   ```
+   http://IP_DO_CELULAR:8080/video
+   ```
+3. Use esse endereço **diretamente** no Python (sem precisar do MediaMTX):
+   ```python
+   RTSP_URL = "rtsp://IP_DO_CELULAR:5554/h264_ulaw.sdp"
+   ```
+
+> Confira na tela do app qual endereço exato apareceu — ele costuma mostrar a URL pronta para copiar.
+
+---
+
+## Parte 5 — Ler o stream no Python
+
+Se você usou **MediaMTX** (Larix ou IP Camera modo push), o script lê sempre do próprio PC:
+
+```python
+RTSP_URL = "rtsp://127.0.0.1:8554/cam"
+# ou, se usou app/stream separados:
+RTSP_URL = "rtsp://127.0.0.1:8554/live/cam"
+```
+
+Se você usou **IP Camera modo servidor** (sem MediaMTX), use o endereço mostrado no celular:
+
+```python
+RTSP_URL = "rtsp://IP_DO_CELULAR:5554/h264_ulaw.sdp"
+```
+
+Exemplo mínimo de leitura:
+
+```python
+import cv2
+
+cap = cv2.VideoCapture(RTSP_URL)
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        continue
+    cv2.imshow("Stream", frame)
+    if cv2.waitKey(1) == ord("q"):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+```
+
+> O script completo com detecção de faces (Haar Cascade) está em `detector_faces_rtsp.py`.
+
+---
+
+## Solução de problemas
+
+| Problema | Causa provável | Solução |
+|---|---|---|
+| `invalid URL` no Larix | Caracteres errados (`;` em vez de `:`) ou faltou app/stream | Use `rtmp://IP:1935/live/cam` com `:` corretos |
+| `can't find rtmp app and stream` | URL com um único segmento de caminho | Use dois segmentos: `/live/cam` |
+| Celular não conecta no PC | IP errado (pegou adaptador virtual: Docker/WSL/Hyper-V) | Confirme o IP do adaptador real com gateway válido |
+| Mesmo com IP certo não conecta | Rede com **isolamento de cliente (AP isolation)** — comum em redes corporativas/escolares | Use hotspot do próprio celular ou um roteador separado |
+| Python não abre o stream | Servidor MediaMTX não está rodando, ou app não está transmitindo ainda | Confirme que a janela do MediaMTX está aberta e o app mostra "transmitindo" |
+| Mac bloqueia o `mediamtx` | Falta de permissão / quarentena do macOS | Rode `xattr -d com.apple.quarantine mediamtx` |
+
+---
+
+## Checklist rápido
+
+- [ ] MediaMTX rodando no PC (janela aberta, sem erros)
+- [ ] IP do PC correto (adaptador real, não virtual)
+- [ ] Celular e PC na mesma rede, sem isolamento de cliente
+- [ ] App (Larix ou IP Camera) configurado e transmitindo
+- [ ] Script Python apontando para a URL certa
+- [ ] `opencv-python` instalado
