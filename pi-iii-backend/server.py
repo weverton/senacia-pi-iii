@@ -6,6 +6,11 @@ from pi_change_detector.change_detector import ChangeDetector
 from pi_face_detector.face_detector import FaceDetector
 import cv2
 import time
+from dotenv import load_dotenv 
+import os
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = FastAPI()
 
@@ -17,11 +22,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-RTSP_URL = "http://admin:Senac@2026@172.17.50.115/cgi-bin/mjpg/video.cgi?channel=1&subtype=1" 
+RTSP_URL = os.environ.get("CAMERA_URL", "")
+FACE_MODEL_PATH = os.environ.get("FACE_DETECTION_MODEL", "")
 
 def generate_frames():
     change_detector = ChangeDetector(min_area=1000, diff_threshold=25)
-    face_detector = FaceDetector(confidence_threshold=0.6)
+    face_detector = FaceDetector(FACE_MODEL_PATH, confidence_threshold=0.6)
     
     last_save_time = 0
     

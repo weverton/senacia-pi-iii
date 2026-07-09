@@ -1,18 +1,19 @@
 # face_recognizer.py
 import cv2
+import os
 import numpy as np
 from ultralytics import YOLO
 from typing import List, Dict
 
 class FaceDetector:    
-    def __init__(self, confidence_threshold: float = 0.5):
+    def __init__(self, model_path, confidence_threshold: float = 0.5):
         """
         Initializes the YOLO-based face recognizer.
         
         :param model_path: Path to your custom trained .pt model file
         :param confidence_threshold: Minimum confidence to consider a detection valid (0.0 to 1.0)
         """
-        self.model = YOLO('/workspaces/CV/PI-III/pi-iii-backend/models/yolo_faces.pt')
+        self.model = YOLO(model_path)
         self.confidence_threshold = confidence_threshold
         
         # Get class names from the model (these should be the names of people you trained)
