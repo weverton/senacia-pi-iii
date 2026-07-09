@@ -1,0 +1,9 @@
+TRAIN_PATH = ...
+
+TEST_PATH = ...
+
+DATABASE_EMBEDDINGS_PATH = ...
+
+THRESHOLD = 0.60
+
+MODEL_NAME = "buffalo_l"
