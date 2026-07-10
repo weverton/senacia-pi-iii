@@ -1,6 +1,5 @@
 # face_recognizer.py
 import cv2
-import os
 import numpy as np
 from ultralytics import YOLO
 from typing import List, Dict
@@ -86,7 +85,7 @@ class FaceDetector:
             cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
             
             # Prepare label text
-            label = f"({confidence:.2f})"
+            label = f"{det['name'] or ' '}({confidence:.2f})"
             
             # Draw label background (filled rectangle)
             label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)[0]

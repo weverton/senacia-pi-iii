@@ -4,6 +4,8 @@ from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pi_change_detector.change_detector import ChangeDetector
 from pi_face_detector.face_detector import FaceDetector
+from pi_face_recognizer.face_recognizer import FaceRecognizer
+from pi_face_recognizer import database
 import cv2
 import time
 from dotenv import load_dotenv 
@@ -24,10 +26,14 @@ app.add_middleware(
 
 RTSP_URL = os.environ.get("CAMERA_URL", "")
 FACE_MODEL_PATH = os.environ.get("FACE_DETECTION_MODEL", "")
+RECOGNIZE_MODEL_PATH = os.environ.get("FACE_RECOGNIZE_MODEL", "")
+RECOGNIZE_DB = database.load_database(os.environ.get("FACE_RECOGNIZE_DB", ""))
+DEBUG = os.environ.get("DEBUG", "0") == "1"
 
 def generate_frames():
     change_detector = ChangeDetector(min_area=1000, diff_threshold=25)
     face_detector = FaceDetector(FACE_MODEL_PATH, confidence_threshold=0.6)
+    face_recognizer = FaceRecognizer(RECOGNIZE_MODEL_PATH, RECOGNIZE_DB)
     
     last_save_time = 0
     
@@ -60,14 +66,22 @@ def generate_frames():
                 current_time = time.time()
                 if current_time - last_save_time > 5:
                     timestamp = time.strftime("%Y%m%d-%H%M%S")
-                    cv2.imwrite(f'motion_detected_{timestamp}.jpg', frame)
-                    print(f"Saved motion capture: motion_detected_{timestamp}.jpg")
+                    
+                    if DEBUG:
+                        cv2.imwrite(f'motion_detected_{timestamp}.jpg', frame)
+                        print(f"Saved motion capture: motion_detected_{timestamp}.jpg")
+                        
                     last_save_time = current_time
                     
                     # --- FACE RECOGNITION LOGIC ---
                     detections = face_detector.recognize(frame)
                     
-                    if not detections:                    
+                    if detections:
+                        for detection in detections:
+                            name, score = face_recognizer.recognize_face(detection['crop'])
+                            detection['name'] = name
+                            
+                    else:
                         print("No faces detected")
 
                 
