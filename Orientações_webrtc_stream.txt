@@ -1,0 +1,37 @@
+"""
+================================================================================
+📹 Phone Camera to Python - WebRTC Streaming Server
+================================================================================
+
+A simple WebRTC server that receives a phone's camera feed and processes it
+with OpenCV in Python. Works across different networks using Tailscale/ZeroTier.
+
+HOW IT WORKS:
+-------------
+1. Phone opens a web page (served by this Python script)
+2. Phone captures camera via getUserMedia() (WebRTC)
+3. Phone sends video to this server via WebRTC
+4. Server receives video frames and processes them with OpenCV
+5. You can add your own image processing logic
+
+INSTALLATION:
+-------------
+pip install aiortc aiohttp opencv-python numpy
+
+RUNNING:
+--------
+Webrtc face detect.PY
+
+NETWORK SETUP:
+---------------------------
+Tailscale (Recommended - free, unlimited)
+    - Install Tailscale on both PC and phone: https://tailscale.com/download
+    - sudo tailscale up
+    - sudo tailscale serve --https 8443 localhost:8000
+    - Access from phone: https://[machine-name].ts.net:8443
+
+TROUBLESHOOTING:
+----------------
+- "navigator.mediaDevices is undefined": Use HTTPS
+- "Connection failed": Check firewall, try Tailscale
+- "No video": Ensure phone camera permissions are granted

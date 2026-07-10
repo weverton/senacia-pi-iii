@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phone Camera Stream</title>
+    
+    <!-- Styles -->
+    <style>
+        /* ============================================================
+           RESET & BASE
+           ============================================================ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+
+        /* ============================================================
+           CONTAINER
+           ============================================================ */
+        .container {
+            max-width: 480px;
+            width: 100%;
+            background: #1a1a1a;
+            border-radius: 20px;
+            padding: 24px 20px 28px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            text-align: center;
+        }
+
+        .icon {
+            font-size: 48px;
+            margin-bottom: 8px;
+        }
+
+        h1 {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #ffffff;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 24px;
+        }
+
+        /* ============================================================
+           STATUS
+           ============================================================ */
+        #status {
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 500;
+            margin-bottom: 20px;
+            background: #2a2a2a;
+            color: #aaa;
+            transition: all 0.3s ease;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #status.connecting {
+            background: #1a3a5c;
+            color: #6ab0ff;
+        }
+
+        #status.streaming {
+            background: #1a4a2a;
+            color: #4cdf8b;
+        }
+
+        #status.error {
+            background: #4a1a1a;
+            color: #ff6b6b;
+        }
+
+        /* ============================================================
+           BUTTONS
+           ============================================================ */
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        button {
+            padding: 12px 28px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 120px;
+        }
+
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        #startBtn {
+            background: #2563eb;
+            color: white;
+        }
+
+        #startBtn:hover:not(:disabled) {
+            background: #1d4ed8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
+        }
+
+        #stopBtn {
+            background: #dc2626;
+            color: white;
+        }
+
+        #stopBtn:hover:not(:disabled) {
+            background: #b91c1c;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(220, 38, 38, 0.3);
+        }
+
+        #snapshotBtn {
+            background: #16a34a;
+            color: white;
+        }
+
+        #snapshotBtn:hover:not(:disabled) {
+            background: #15803d;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(22, 163, 74, 0.3);
+        }
+
+        /* ============================================================
+           VIDEO PREVIEW
+           ============================================================ */
+        #videoPreview {
+            width: 100%;
+            max-width: 400px;
+            aspect-ratio: 4 / 3;
+            border-radius: 12px;
+            background: #111;
+            margin: 12px auto 0;
+            display: none;
+            object-fit: cover;
+            border: 1px solid #2a2a2a;
+        }
+
+        #videoPreview.active {
+            display: block;
+        }
+
+        /* ============================================================
+           FOOTER
+           ============================================================ */
+        .footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .footer kbd {
+            background: #2a2a2a;
+            padding: 2px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #aaa;
+            border: 1px solid #333;
+        }
+
+        /* ============================================================
+           RESPONSIVE
+           ============================================================ */
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px 16px;
+            }
+
+            button {
+                padding: 10px 20px;
+                font-size: 14px;
+                min-width: 100px;
+            }
+
+            h1 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="icon">📹</div>
+        <h1>Phone Camera Stream</h1>
+        <p class="subtitle">Stream your phone's camera to Python</p>
+
+        <!-- Status -->
+        <div id="status">Ready</div>
+
+        <!-- Buttons -->
+        <div class="btn-group">
+            <button id="startBtn">Start</button>
+            <button id="stopBtn" disabled>Stop</button>
+            <button id="snapshotBtn" disabled> Snapshot</button>
+        </div>
+
+        <!-- Video Preview (shows what's being streamed) -->
+        <video id="videoPreview" autoplay playsinline muted></video>
+
+        <!-- Footer -->
+        <div class="footer">
+            <kbd>q</kbd> Quit &nbsp;·&nbsp; <kbd>s</kbd> Save snapshot
+        </div>
+    </div>
+
+    <!-- ============================================================
+    JAVASCRIPT
+    ============================================================ -->
+    <script>
+        (function() {
+            'use strict';
+
+            // ============================================================
+            // CONFIGURATION
+            // ============================================================
+            const ICE_SERVERS = [
+                { urls: "stun:stun.l.google.com:19302" },
+                { urls: "stun:stun1.l.google.com:19302" },
+                { urls: "stun:stun2.l.google.com:19302" },
+            ];
+
+            // ============================================================
+            // DOM REFS
+            // ============================================================
+            const statusEl = document.getElementById('status');
+            const startBtn = document.getElementById('startBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            const snapshotBtn = document.getElementById('snapshotBtn');
+            const videoPreview = document.getElementById('videoPreview');
+
+            // ============================================================
+            // STATE
+            // ============================================================
+            let pc = null;
+            let stream = null;
+            let isStreaming = false;
+
+            // ============================================================
+            // HELPERS
+            // ============================================================
+            function setStatus(text, type = '') {
+                statusEl.textContent = text;
+                statusEl.className = type;
+            }
+
+            function updateButtons(streaming) {
+                isStreaming = streaming;
+                startBtn.disabled = streaming;
+                stopBtn.disabled = !streaming;
+                snapshotBtn.disabled = !streaming;
+                videoPreview.classList.toggle('active', streaming);
+            }
+
+            // ============================================================
+            // WEBRTC NEGOTIATION
+            // ============================================================
+            async function negotiate() {
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+
+                // Wait for ICE gathering to complete
+                await new Promise(resolve => {
+                    if (pc.iceGatheringState === 'complete') {
+                        resolve();
+                    } else {
+                        pc.addEventListener('icegatheringstatechange', function handler() {
+                            if (pc.iceGatheringState === 'complete') {
+                                pc.removeEventListener('icegatheringstatechange', handler);
+                                resolve();
+                            }
+                        });
+                    }
+                });
+
+                // Send offer to server
+                const response = await fetch('/offer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sdp: pc.localDescription.sdp,
+                        type: pc.localDescription.type
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const answer = await response.json();
+                await pc.setRemoteDescription(answer);
+            }
+
+            // ============================================================
+            // START STREAMING
+            // ============================================================
+            async function startStream() {
+                try {
+                    setStatus('Requesting camera...', 'connecting');
+                    startBtn.disabled = true;
+
+                    // Get camera
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            facingMode: 'environment',
+                            width: { ideal: 640 },
+                            height: { ideal: 480 },
+                            frameRate: { ideal: 15 }
+                        },
+                        audio: false
+                    });
+
+                    // Show preview
+                    videoPreview.srcObject = stream;
+
+                    // Create peer connection
+                    pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+
+                    // Add tracks
+                    stream.getTracks().forEach(track => {
+                        pc.addTrack(track, stream);
+                    });
+
+                    // Connection state monitoring
+                    pc.oniceconnectionstatechange = () => {
+                        const state = pc.iceConnectionState;
+                        console.log('ICE state:', state);
+
+                        if (state === 'connected' || state === 'completed') {
+                            setStatus('Streaming!', 'streaming');
+                        } else if (state === 'connecting' || state === 'checking') {
+                            setStatus('Connecting...', 'connecting');
+                        } else if (state === 'failed') {
+                            setStatus('Connection failed', 'error');
+                            stopStream();
+                        } else if (state === 'disconnected') {
+                            setStatus('Disconnected', 'error');
+                        } else if (state === 'closed') {
+                            setStatus('Closed', '');
+                        }
+                    };
+
+                    pc.onconnectionstatechange = () => {
+                        console.log('Connection state:', pc.connectionState);
+                        if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+                            stopStream();
+                        }
+                    };
+
+                    // Negotiate connection
+                    setStatus('Negotiating...', 'connecting');
+                    await negotiate();
+
+                    setStatus('Streaming!', 'streaming');
+                    updateButtons(true);
+
+                } catch (err) {
+                    console.error('Error:', err);
+                    setStatus(`${err.message}`, 'error');
+                    stopStream();
+                }
+            }
+
+            // ============================================================
+            // STOP STREAMING
+            // ============================================================
+            function stopStream() {
+                // Close peer connection
+                if (pc) {
+                    pc.close();
+                    pc = null;
+                }
+
+                // Stop all tracks
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    stream = null;
+                }
+
+                // Clear preview
+                videoPreview.srcObject = null;
+                videoPreview.classList.remove('active');
+
+                setStatus('Stopped');
+                updateButtons(false);
+                startBtn.disabled = false;
+            }
+
+            // ============================================================
+            // SNAPSHOT
+            // ============================================================
+            async function takeSnapshot() {
+                if (!isStreaming) {
+                    setStatus('Not streaming', 'error');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/health');
+                    if (response.ok) {
+                        setStatus('Snapshot saved!', 'streaming');
+                        setTimeout(() => {
+                            setStatus('Streaming!', 'streaming');
+                        }, 1500);
+                    } else {
+                        throw new Error('Health check failed');
+                    }
+                } catch (err) {
+                    console.error('Snapshot error:', err);
+                    setStatus('Snapshot failed', 'error');
+                }
+            }
+
+            // ============================================================
+            // EVENT LISTENERS
+            // ============================================================
+            startBtn.addEventListener('click', startStream);
+            stopBtn.addEventListener('click', stopStream);
+            snapshotBtn.addEventListener('click', takeSnapshot);
+
+            // Clean up on page close
+            window.addEventListener('beforeunload', stopStream);
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !startBtn.disabled) {
+                    startStream();
+                } else if (e.key === 'Escape' && isStreaming) {
+                    stopStream();
+                }
+            });
+
+            console.log('📹 Phone Camera Stream client loaded');
+            console.log('ICE Servers:', ICE_SERVERS);
+
+        })();
+    </script>
+
+</body>
+</html>
