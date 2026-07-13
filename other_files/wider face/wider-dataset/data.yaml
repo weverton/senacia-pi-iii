@@ -1,0 +1,6 @@
+train: ./WIDER Face Dataset For YOLOv12/WIDER Face Dataset For YOLOv12/train
+val: ./WIDER Face Dataset For YOLOv12/WIDER Face Dataset For YOLOv12/val
+test: ./WIDER Face Dataset For YOLOv12/WIDER Face Dataset For YOLOv12/test
+nc: 1
+names: ['face']
+
